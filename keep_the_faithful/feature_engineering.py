@@ -65,39 +65,47 @@ def add_churn(dfn, dfa):
     return dfn
 
 
-def add_recent_attendance(dfn, dfa):
+def add_recent_attendance(dfn, dfa, today):
     '''
     Adds attendance per Sunday for the last month
 
     Returns user info
     '''
-    present_users = dfa[
-        (dfa['Date'] == '9/26/2010') &
-        (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    dfn['t-1'] = 0
-    dfn['t-1'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                           index=dfn.index)
 
-    present_users = dfa[
-        (dfa['Date'] == '9/19/2010') &
-        (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    dfn['t-2'] = 0
-    dfn['t-2'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                           index=dfn.index)
+    sunday = today - np.timedelta64(today.dayofweek + 1, 'D')
 
-    present_users = dfa[
-        (dfa['Date'] == '9/12/2010') &
-        (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    dfn['t-3'] = 0
-    dfn['t-3'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                           index=dfn.index)
+    for i in xrange(1, 9):
+        present_users = dfa[
+            (dfa['Date'] == sunday) &
+            (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
+        dfn['t-' + str(i)] = 0
+        dfn['t-' + str(i)] = pd.Series(
+            dfn['NameCounter'].isin(present_users).astype('int'),
+            index=dfn.index)
+        print sunday
+        sunday -= np.timedelta64(7, 'D')
 
-    present_users = dfa[
-        (dfa['Date'] == '9/5/2010') &
-        (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    dfn['t-4'] = 0
-    dfn['t-4'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                           index=dfn.index)
+
+    # present_users = dfa[
+    #     (dfa['Date'] == '9/19/2010') &
+    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
+    # dfn['t-2'] = 0
+    # dfn['t-2'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
+    #                        index=dfn.index)
+
+    # present_users = dfa[
+    #     (dfa['Date'] == '9/12/2010') &
+    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
+    # dfn['t-3'] = 0
+    # dfn['t-3'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
+    #                        index=dfn.index)
+
+    # present_users = dfa[
+    #     (dfa['Date'] == '9/5/2010') &
+    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
+    # dfn['t-4'] = 0
+    # dfn['t-4'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
+    #                        index=dfn.index)
 
     return dfn
 

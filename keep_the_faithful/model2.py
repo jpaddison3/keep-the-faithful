@@ -10,6 +10,8 @@ sys.path.append(
 import utilities
 import feature_engineering
 
+today = pd.to_datetime('10/1/2010')
+
 dfn, dfa, dfadd, dfr = utilities.load_data()
 print '.'
 dfn, dfa = utilities.clean_data(dfn, dfa, dfadd)
@@ -18,7 +20,7 @@ dfn, dfa = feature_engineering.select_active(dfn, dfa)
 print '.'
 dfn = feature_engineering.add_churn(dfn, dfa)
 print '.'
-dfn = feature_engineering.add_recent_attendance(dfn, dfa)
+dfn = feature_engineering.add_recent_attendance(dfn, dfa, today)
 print '.'
 dfn = feature_engineering.add_small_groups(dfn, dfa)
 print '.'
