@@ -8,7 +8,8 @@ def load_data():
     Returns user info, attendance, addresses, relationships
     '''
     # user info dataframe
-    dfn = pd.read_csv('/Users/jpaddison/Documents/Zipfian/ProjectData/NANames.csv')
+    dfn = pd.read_csv(
+        '/Users/jpaddison/Documents/Zipfian/ProjectData/NANames.csv')
     # attendance dataframe
     dfa = pd.read_csv(
         '/Users/jpaddison/Documents/Zipfian/ProjectData/Att09-10.csv')
@@ -24,7 +25,7 @@ def load_data():
 def clean_data(dfn, dfa, dfadd):
     # use interesting columns
     useful_cols = ['BirthYear', 'Gender', 'MainAddress', 'NameCounter',
-                   'WhenSetup']
+                   'FamNu', 'UnitNu', 'WhenSetup']
     dfn = dfn[useful_cols]
     # merge addresses with info
     dfn = dfn.rename(columns={'MainAddress': 'AddressCounter'})

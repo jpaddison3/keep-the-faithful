@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from collections import defaultdict
 import datetime
 import utilities
 
@@ -34,6 +35,8 @@ def select_active(dfn, dfa):
     # solid user attendance
     dfa = dfa[dfa['NameID'].isin(solid_users)]
 
+    # There are more intelligent places for this, but this is the fastest
+    dfa['Date'] = pd.to_datetime(dfa['Date'])
     return dfn, dfa
 
 
@@ -45,6 +48,7 @@ def add_churn(dfn, dfa):
     dfn['churn'] = 0
     dfn['churn'] = pd.Series((~dfn['NameCounter'].isin(future_present_users))
                                  .astype('int'), index=dfn.index)
+    print 'total churned', dfn['churn'].sum()
     print 'churn percentage', 100 * dfn['churn'].mean()
     return dfn
 
@@ -80,31 +84,61 @@ def add_recent_attendance(dfn, dfa):
 
     return dfn
 
-    # # small_group_users = su_att[
-    # #     (su_att['Date'] >= today - np.timedelta64(4, 'M')) &
-    # #     (su_att['Date'] < today) &
-    # #     (su_att['Organization'] != 'Sunday Worship')]['NameID'].values
-    # # su_info['InSG'] = 0
-    # # su_info['InSG'] = pd.Series(
-    # #     su_info['NameCounter'].isin(small_group_users).astype('int'), 
-    # #     index=su_info.index)
 
-    # # su_info['SmallGroups'] = None
-    # # dfsg = dfa[dfa['Organization'] != 'Sunday Worship']
-    # # su_info['SmallGroups'] = dfsg.groupby('NameID')['Organization'].unique()
+def add_small_groups(dfn, dfa):
+    today = pd.to_datetime('10/1/2010')
+    small_group_users = dfa[
+        (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
+        (pd.to_datetime(dfa['Date']) < today) &
+        (dfa['Organization'] != 'Sunday Worship')]['NameID'].values
+    dfn['InSG'] = 0
+    dfn['InSG'] = pd.Series(
+        dfn['NameCounter'].isin(small_group_users).astype('int'), 
+        index=dfn.index)
 
-    # # sg_dates = {}
-    # # for small_group in dfa['Organization'].unique():
-    # #     if small_group != 'Sunday Worship':
-    # #         sg_dates[small_group] = \
-    # #             dfa[dfa['Organization'] == small_group]['Date'].unique()
+    dfsg = dfa[(dfa['Organization'] != 'Sunday Worship') &
+               (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
+               (pd.to_datetime(dfa['Date']) < today)]
+    sg_series = dfsg.groupby('NameID')['Organization'].unique()
+    dfsg = pd.DataFrame({'NameCounter': sg_series.index,
+                         'SmallGroups': sg_series})
+    dfn = pd.merge(dfn, dfsg, how='left', on='NameCounter')
+
+    sg_dates = {}
+    for small_group in dfa['Organization'].unique():
+        if small_group != 'Sunday Worship':
+            sg_dates[small_group] = \
+                dfa[(pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
+                    (pd.to_datetime(dfa['Date']) < today) &
+                    (dfa['Organization'] == small_group)]['Date'].unique()
     
-    # # def small_group_percentage(small_groups):
-    # #     for small_group in small_groups:
-    # #         dfa[(dfa['NameID'] == small_groups.index)]
+    def small_group_percentage(user_and_sg, today=None):
+        if np.any(pd.isnull(user_and_sg['SmallGroups'])):
+            return -1
+        dfa_user = dfa[dfa['NameID'] == user_and_sg['NameCounter']]
+        att_number = 0
+        total_meeting_number = 0
+        for sg in user_and_sg['SmallGroups']:
+            dfa_user_smallgroup_att = dfa_user[
+            (dfa_user['Organization'] == sg) &
+            (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
+            (pd.to_datetime(dfa['Date']) < today)]
+            att_number += len(dfa_user_smallgroup_att['Date'].unique())
+            total_meeting_number += len(sg_dates[sg])
+        return att_number / float(total_meeting_number) * 100
 
-    # # su_info['SGPercentage'] = su_info['SmallGroups'].apply(
-    # #     small_group_percentage)
+    dfn['SGPercentage'] = dfn[['NameCounter', 'SmallGroups']].apply(
+        small_group_percentage, axis=1, today=today)
+
+    return dfn
+
+
+def add_family(dfn, dfr):
+    def find_fam(fam_id, dfn, dfr):
+        return len(dfn[dfn['FamNu'] == fam_id])
+    dfn['Family'] = dfn['FamNu'].apply(find_fam, dfn=dfn, dfr=dfr)
+    return dfn
+
 
 if __name__ == '__main__':
     t0 = datetime.datetime.now()

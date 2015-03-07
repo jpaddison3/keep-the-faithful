@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+import sys
+sys.path.append(
+    '/Users/jpaddison/Documents/Zipfian/KeepTheFaithful/keep_the_faithful')
 import utilities
 import feature_engineering
 
@@ -12,6 +15,11 @@ print '.'
 dfn = feature_engineering.add_churn(dfn, dfa)
 print '.'
 dfn = feature_engineering.add_recent_attendance(dfn, dfa)
+print '.'
+dfn = feature_engineering.add_small_groups(dfn, dfa)
+print '.'
+dfn = feature_engineering.add_family(dfn, dfr)
+print '.'
 
 # Do this first for speed
 dfn['YearSetup'] = pd.to_datetime(dfn['WhenSetup']).apply(lambda x: x.year)
@@ -55,3 +63,17 @@ print '-- Recent Attendance --'
 print 'all', dfn['RecentAttendance'].mean()
 print 'churned users', df_churned['RecentAttendance'].mean()
 print 'staying users', df_stayed['RecentAttendance'].mean()
+#   -- Small Groups
+print '-- In a Small Group --'
+print 'all', dfn['InSG'].mean()
+print 'churned', df_churned['InSG'].mean()
+print 'staying', df_stayed['InSG'].mean()
+print '-- Small Group Attendance --'
+print 'all', dfn['SGPercentage'].mean()
+print 'churned', df_churned['SGPercentage'].mean()
+print 'staying', df_stayed['SGPercentage'].mean()
+#   --- Family Size
+print '-- Family Size --'
+print 'all', dfn['Family'].mean()
+print 'churned', df_churned['Family'].mean()
+print 'staying', df_stayed['Family'].mean()
