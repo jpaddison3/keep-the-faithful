@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def load_data():
     '''
     Load data into dataframes
@@ -23,6 +24,11 @@ def load_data():
 
 
 def clean_data(dfn, dfa, dfadd):
+    '''
+    Removes unwanted columns, gets addresses, and fills nans
+
+    Returns user info, attendance
+    '''
     # use interesting columns
     useful_cols = ['BirthYear', 'Gender', 'MainAddress', 'NameCounter',
                    'FamNu', 'UnitNu', 'WhenSetup']

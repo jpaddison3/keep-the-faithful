@@ -4,11 +4,17 @@ from collections import defaultdict
 import datetime
 import utilities
 
+
 def select_active(dfn, dfa):
+    '''
+    Select active users, defined as coming twice in the last two months
+
+    Returns user info, attendance
+    '''
     # select for year for speed
     explore_year = '2010'
     dfa = dfa[dfa['Date'].str[-4:] == explore_year]
-    
+
     today = pd.to_datetime('10/1/2010')
     recent_sundays = (dfa['Organization'] == 'Sunday Worship') & \
                      (pd.to_datetime(dfa['Date']) >=
@@ -16,7 +22,8 @@ def select_active(dfn, dfa):
                      (pd.to_datetime(dfa['Date']) < today)
     recent_attendance_numbers = dfa[recent_sundays]\
         .groupby(['NameID'])['Date'].nunique()
-    recent_users = recent_attendance_numbers[recent_attendance_numbers >= 2].index
+    recent_users = recent_attendance_numbers[
+        recent_attendance_numbers >= 1].index
 
     year_attendance_numbers = dfa[dfa['Organization'] == 'Sunday Worship']\
         .groupby(['NameID'])['Date'].nunique()
@@ -41,51 +48,66 @@ def select_active(dfn, dfa):
 
 
 def add_churn(dfn, dfa):
+    '''
+    Add a churn column for people who do not come in the next two months
+
+    Returns user info
+    '''
     future_present_users = dfa[
         (pd.to_datetime(dfa['Date']) >= pd.to_datetime('10/1/2010')) &
         (pd.to_datetime(dfa['Date']) <= pd.to_datetime('12/12/2010')) &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['churn'] = 0
     dfn['churn'] = pd.Series((~dfn['NameCounter'].isin(future_present_users))
-                                 .astype('int'), index=dfn.index)
+                             .astype('int'), index=dfn.index)
     print 'total churned', dfn['churn'].sum()
     print 'churn percentage', 100 * dfn['churn'].mean()
     return dfn
 
 
 def add_recent_attendance(dfn, dfa):
+    '''
+    Adds attendance per Sunday for the last month
+
+    Returns user info
+    '''
     present_users = dfa[
         (dfa['Date'] == '9/26/2010') &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['t-1'] = 0
     dfn['t-1'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                               index=dfn.index)
+                           index=dfn.index)
 
     present_users = dfa[
         (dfa['Date'] == '9/19/2010') &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['t-2'] = 0
     dfn['t-2'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                               index=dfn.index)
+                           index=dfn.index)
 
     present_users = dfa[
         (dfa['Date'] == '9/12/2010') &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['t-3'] = 0
     dfn['t-3'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                               index=dfn.index)
+                           index=dfn.index)
 
     present_users = dfa[
         (dfa['Date'] == '9/5/2010') &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['t-4'] = 0
     dfn['t-4'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-                               index=dfn.index)
+                           index=dfn.index)
 
     return dfn
 
 
 def add_small_groups(dfn, dfa):
+    '''
+    Adds small group membership and attendance columns
+
+    Returns user info
+    '''
     today = pd.to_datetime('10/1/2010')
     small_group_users = dfa[
         (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
@@ -93,7 +115,7 @@ def add_small_groups(dfn, dfa):
         (dfa['Organization'] != 'Sunday Worship')]['NameID'].values
     dfn['InSG'] = 0
     dfn['InSG'] = pd.Series(
-        dfn['NameCounter'].isin(small_group_users).astype('int'), 
+        dfn['NameCounter'].isin(small_group_users).astype('int'),
         index=dfn.index)
 
     dfsg = dfa[(dfa['Organization'] != 'Sunday Worship') &
@@ -108,10 +130,11 @@ def add_small_groups(dfn, dfa):
     for small_group in dfa['Organization'].unique():
         if small_group != 'Sunday Worship':
             sg_dates[small_group] = \
-                dfa[(pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
+                dfa[(pd.to_datetime(dfa['Date']) >=
+                     today - np.timedelta64(4, 'M')) &
                     (pd.to_datetime(dfa['Date']) < today) &
                     (dfa['Organization'] == small_group)]['Date'].unique()
-    
+
     def small_group_percentage(user_and_sg, today=None):
         if np.any(pd.isnull(user_and_sg['SmallGroups'])):
             return -1
@@ -120,9 +143,10 @@ def add_small_groups(dfn, dfa):
         total_meeting_number = 0
         for sg in user_and_sg['SmallGroups']:
             dfa_user_smallgroup_att = dfa_user[
-            (dfa_user['Organization'] == sg) &
-            (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
-            (pd.to_datetime(dfa['Date']) < today)]
+                (dfa_user['Organization'] == sg) &
+                (pd.to_datetime(dfa['Date']) >= today -
+                 np.timedelta64(4, 'M')) &
+                (pd.to_datetime(dfa['Date']) < today)]
             att_number += len(dfa_user_smallgroup_att['Date'].unique())
             total_meeting_number += len(sg_dates[sg])
         return att_number / float(total_meeting_number) * 100
@@ -134,11 +158,26 @@ def add_small_groups(dfn, dfa):
 
 
 def add_family(dfn, dfr):
+    '''
+    Adds a family size column
+
+    Returns user info
+    '''
     def find_fam(fam_id, dfn, dfr):
         return len(dfn[dfn['FamNu'] == fam_id])
     dfn['Family'] = dfn['FamNu'].apply(find_fam, dfn=dfn, dfr=dfr)
     return dfn
 
+
+def model_prep(dfn):
+    dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'SmallGroups'], axis=1)
+    dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup'])\
+        .apply(lambda x: x.year)
+    dfn = pd.get_dummies(dfn)
+    name_ids = dfn.pop('NameCounter').values
+    y = dfn.pop('churn').values
+    X = dfn.values
+    return X, y, name_ids, dfn
 
 if __name__ == '__main__':
     t0 = datetime.datetime.now()
