@@ -4,6 +4,7 @@ from datetime import timedelta
 from sklearn.metrics import precision_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import cross_val_score
+from sklearn.metrics import confusion_matrix
 
 # --------------- Load Data ---------------------------------- #
 # attendance dataframe
@@ -24,6 +25,8 @@ dfa = dfa[dfa['Date'].apply(lambda x: x.year) == explore_year]
 useful_cols = ['BirthYear', 'Gender', 'MainAddress', 'NameCounter',
                'WhenSetup']
 dfn = dfn[useful_cols]
+# Change index to the unique name id
+dfn = dfn.set_index('NameCounter')
 # merge addresses with info
 dfn = dfn.rename(columns={'MainAddress': 'AddressCounter'})
 dfadd = dfadd[['City', 'AddressCounter']]
@@ -48,12 +51,16 @@ year_users = year_attendance_numbers[year_attendance_numbers >= 2].index
 solid_users = set(recent_users) & set(year_users)
 
 # solid user info
-print len(solid_users)
-su_info = dfn[dfn['NameCounter'].isin(solid_users)]
-print len(su_info)  # WHERE'D HE GO ###################################
+solid_users_arr = np.array(list(solid_users))
+su_info = dfn[np.in1d(dfn.index, solid_users_arr)]
+# Some users are not in dfn, which is, hmm, bad
+lonelies = solid_users_arr[~np.in1d(solid_users_arr, su_info.index)]
+for l in lonelies:
+    print l in dfn.index
+    print l in dfa['NameID'].values
+
 # solid user attendance
 su_att = dfa[dfa['NameID'].isin(solid_users)]
-su_info = su_info.set_index('NameCounter')
 
 present_users = su_att[
     (su_att['Date'] == '9/26/2010') &
@@ -109,5 +116,6 @@ rf.fit(X, y)
 print precision_score(y, rf.predict(X))
 print su_info.columns
 print rf.feature_importances_
+print confusion_matrix(y, rf.predict(X))
 
 # There seems to be a problem with the imbalanced class distributon
