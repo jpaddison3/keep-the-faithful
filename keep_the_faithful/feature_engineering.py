@@ -5,17 +5,15 @@ import datetime
 import utilities
 
 
-def select_active(dfn, dfa):
+def select_active(dfn, dfa, today):
     '''
     Select active users, defined as coming twice in the last two months
 
     Returns user info, attendance
     '''
     # select for year for speed
-    explore_year = '2010'
-    dfa = dfa[dfa['Date'].str[-4:] == explore_year]
+    dfa = dfa[dfa['Date'].str[-4:] == str(today.year)]
 
-    today = pd.to_datetime('10/1/2010')
     recent_sundays = (dfa['Organization'] == 'Sunday Worship') & \
                      (pd.to_datetime(dfa['Date']) >=
                       today - np.timedelta64(2, 'M')) & \
@@ -23,7 +21,7 @@ def select_active(dfn, dfa):
     recent_attendance_numbers = dfa[recent_sundays]\
         .groupby(['NameID'])['Date'].nunique()
     recent_users = recent_attendance_numbers[
-        recent_attendance_numbers >= 1].index
+        recent_attendance_numbers >= 2].index
 
     year_attendance_numbers = dfa[dfa['Organization'] == 'Sunday Worship']\
         .groupby(['NameID'])['Date'].nunique()
@@ -47,15 +45,15 @@ def select_active(dfn, dfa):
     return dfn, dfa
 
 
-def add_churn(dfn, dfa):
+def add_churn(dfn, dfa, today):
     '''
     Add a churn column for people who do not come in the next two months
 
     Returns user info
     '''
     future_present_users = dfa[
-        (pd.to_datetime(dfa['Date']) >= pd.to_datetime('10/1/2010')) &
-        (pd.to_datetime(dfa['Date']) <= pd.to_datetime('12/12/2010')) &
+        (pd.to_datetime(dfa['Date']) >= today) &
+        (pd.to_datetime(dfa['Date']) <= today + np.timedelta64(2, 'M')) &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
     dfn['churn'] = 0
     dfn['churn'] = pd.Series((~dfn['NameCounter'].isin(future_present_users))
@@ -87,13 +85,12 @@ def add_recent_attendance(dfn, dfa, today):
     return dfn
 
 
-def add_small_groups(dfn, dfa):
+def add_small_groups(dfn, dfa, today):
     '''
     Adds small group membership and attendance columns
 
     Returns user info
     '''
-    today = pd.to_datetime('10/1/2010')
     small_group_users = dfa[
         (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
         (pd.to_datetime(dfa['Date']) < today) &
