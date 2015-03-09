@@ -6,6 +6,8 @@ sys.path.append(
 import utilities
 import feature_engineering
 
+today = pd.to_datetime('10/1/2010')
+
 dfn, dfa, dfadd, dfr = utilities.load_data()
 print '.'
 dfn, dfa = utilities.clean_data(dfn, dfa, dfadd)
@@ -14,15 +16,16 @@ dfn, dfa = feature_engineering.select_active(dfn, dfa)
 print '.'
 dfn = feature_engineering.add_churn(dfn, dfa)
 print '.'
-dfn = feature_engineering.add_recent_attendance(dfn, dfa)
+dfn = feature_engineering.add_recent_attendance(dfn, dfa, today)
 print '.'
 dfn = feature_engineering.add_small_groups(dfn, dfa)
 print '.'
 dfn = feature_engineering.add_family(dfn, dfr)
 print '.'
+dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup']).apply(lambda x: x.year)
+dfn = feature_engineering.to_relative_time(dfn, today)
 
 # Do this first for speed
-dfn['YearSetup'] = pd.to_datetime(dfn['WhenSetup']).apply(lambda x: x.year)
 dfn['RecentAttendance'] = dfn['t-1'] + dfn['t-2'] + dfn['t-3'] + dfn['t-4']
 
 df_churned = dfn[dfn['churn'] == 1]
@@ -34,11 +37,11 @@ print '-- Birth year was nan --'
 print 'all', np.mean(dfn['BirthYear'] == 1800)
 print 'churned users', np.mean(df_churned['BirthYear'] == 1800)
 print 'staying users', np.mean(df_stayed['BirthYear'] == 1800)
-#    --- Average birth year
-print '-- Average birth year --'
-print 'all', dfn[dfn['BirthYear'] != 1800]['BirthYear'].mean()
-print 'churned', df_churned[df_churned['BirthYear'] != 1800]['BirthYear'].mean()
-print 'staying', df_stayed[df_stayed['BirthYear'] != 1800]['BirthYear'].mean()
+#    --- Average age
+print '-- Average age --'
+print 'all', dfn[dfn['BirthYear'] != 1800]['Age'].mean()
+print 'churned', df_churned[df_churned['BirthYear'] != 1800]['Age'].mean()
+print 'staying', df_stayed[df_stayed['BirthYear'] != 1800]['Age'].mean()
 #    --- Gender
 print '-- Gender --'
 print '  all  '
@@ -53,11 +56,11 @@ print '  staying  '
 print 'Male', np.mean(df_stayed['Gender'] == 'M')
 print 'Female', np.mean(df_stayed['Gender'] == 'F')
 print 'Not specified', np.mean(df_stayed['Gender'] == 'N')
-#   --- Year Setup
-print '-- Year Setup --'
-print 'all', dfn['YearSetup'].mean()
-print 'churned users', df_churned['YearSetup'].mean()
-print 'staying users', df_stayed['YearSetup'].mean()
+#   --- Years In Church
+print '-- Years In Church --'
+print 'all', dfn['YearsInChurch'].mean()
+print 'churned users', df_churned['YearsInChurch'].mean()
+print 'staying users', df_stayed['YearsInChurch'].mean()
 #   --- Recent Attendance
 print '-- Recent Attendance --'
 print 'all', dfn['RecentAttendance'].mean()

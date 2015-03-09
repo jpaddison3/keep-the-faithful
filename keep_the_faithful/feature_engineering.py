@@ -67,7 +67,7 @@ def add_churn(dfn, dfa):
 
 def add_recent_attendance(dfn, dfa, today):
     '''
-    Adds attendance per Sunday for the last month
+    Adds attendance per Sunday for the last n sundays
 
     Returns user info
     '''
@@ -82,30 +82,7 @@ def add_recent_attendance(dfn, dfa, today):
         dfn['t-' + str(i)] = pd.Series(
             dfn['NameCounter'].isin(present_users).astype('int'),
             index=dfn.index)
-        print sunday
         sunday -= np.timedelta64(7, 'D')
-
-
-    # present_users = dfa[
-    #     (dfa['Date'] == '9/19/2010') &
-    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    # dfn['t-2'] = 0
-    # dfn['t-2'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-    #                        index=dfn.index)
-
-    # present_users = dfa[
-    #     (dfa['Date'] == '9/12/2010') &
-    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    # dfn['t-3'] = 0
-    # dfn['t-3'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-    #                        index=dfn.index)
-
-    # present_users = dfa[
-    #     (dfa['Date'] == '9/5/2010') &
-    #     (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    # dfn['t-4'] = 0
-    # dfn['t-4'] = pd.Series(dfn['NameCounter'].isin(present_users).astype('int'),
-    #                        index=dfn.index)
 
     return dfn
 
@@ -177,10 +154,27 @@ def add_family(dfn, dfr):
     return dfn
 
 
-def model_prep(dfn):
-    dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'SmallGroups'], axis=1)
+def to_relative_time(dfn, today):
+    '''
+    Adds columns for years in church and age from WhenSetup and BirthYear
+    '''
+    dfn['YearsInChurch'] = today.year - dfn['WhenSetup']
+    dfn['Age'] = today.year - dfn['BirthYear']
+    return dfn
+
+
+def model_prep(dfn, today):
+    '''
+    Transforms dataframe into form presentable to a model.
+
+    Returns feature matrix X, labels y, row identifiers name_ids, and the
+    modified user info
+    '''
     dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup'])\
         .apply(lambda x: x.year)
+    dfn = to_relative_time(dfn, today)
+    dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'SmallGroups', 'BirthYear', 
+                    'WhenSetup'], axis=1)
     dfn = pd.get_dummies(dfn)
     name_ids = dfn.pop('NameCounter').values
     y = dfn.pop('churn').values
@@ -205,17 +199,3 @@ if __name__ == '__main__':
     t4 = datetime.datetime.now() - t0 - t3
     print 't4', t4
     print dfn.head()
-
-# # ------------- Ready the features for model ------------ #
-# # change when setup to only use year ## NEED FIXING
-# dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup'])\
-#     .apply(lambda x: x.year)
-# su_info = su_info.drop(['City'], axis=1)
-# su_info['WhenSetup'] = pd.to_datetime(su_info['WhenSetup'])\
-#     .apply(lambda x: x.year)
-# su_info = pd.get_dummies(su_info)
-# y = su_info.pop('churn').values
-# X = su_info.values
-# if __name__ == '__main__':
-#     dfa, dfn, dfadd, dfr = load_all()
-#     print dfa.head()

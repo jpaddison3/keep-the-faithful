@@ -26,7 +26,7 @@ dfn = feature_engineering.add_small_groups(dfn, dfa)
 print '.'
 dfn = feature_engineering.add_family(dfn, dfr)
 print '.'
-X, y, name_ids, dfn = feature_engineering.model_prep(dfn)
+X, y, name_ids, dfn = feature_engineering.model_prep(dfn, today)
 
 rf = RandomForestClassifier()
 
@@ -36,7 +36,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4)
 rf.fit(X_train, y_train)
 print precision_score(y_train, rf.predict(X_train))
 print precision_score(y_test, rf.predict(X_test))
-print dfn.columns
-print rf.feature_importances_
+sorted_args = np.argsort(rf.feature_importances_)[::-1]
+print zip(dfn.columns[sorted_args], rf.feature_importances_[sorted_args])
 print confusion_matrix(y_train, rf.predict(X_train))
 print confusion_matrix(y_test, rf.predict(X_test))
