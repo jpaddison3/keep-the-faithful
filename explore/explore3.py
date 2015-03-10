@@ -6,24 +6,10 @@ sys.path.append(
 import utilities
 import feature_engineering
 
-today = pd.to_datetime('10/1/2012')
-
-dfn, dfa, dfadd, dfr = utilities.load_data(today.year)
-print '.'
-dfn, dfa = utilities.clean_data(dfn, dfa, dfadd)
-print '.'
-dfn, dfa = feature_engineering.select_active(dfn, dfa, today)
-print '.'
-dfn = feature_engineering.add_churn(dfn, dfa, today)
-print '.'
-dfn = feature_engineering.add_recent_attendance(dfn, dfa, today)
-print '.'
-dfn = feature_engineering.add_small_groups(dfn, dfa, today)
-print '.'
-dfn = feature_engineering.add_family(dfn, dfr)
-print '.'
-dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup']).apply(lambda x: x.year)
-dfn = feature_engineering.to_relative_time(dfn, today)
+dates = [pd.to_datetime('10/1/2005'), pd.to_datetime('10/1/2006'),
+         pd.to_datetime('10/1/2007'), pd.to_datetime('10/1/2008'),
+         pd.to_datetime('10/1/2009'), pd.to_datetime('10/1/2010')]
+dfn = utilities.combine_load(dates)
 
 # Do this first for speed
 dfn['RecentAttendance'] = dfn['t-1'] + dfn['t-2'] + dfn['t-3'] + dfn['t-4']
@@ -31,7 +17,7 @@ dfn['RecentAttendance'] = dfn['t-1'] + dfn['t-2'] + dfn['t-3'] + dfn['t-4']
 df_churned = dfn[dfn['churn'] == 1]
 df_stayed = dfn[dfn['churn'] == 0]
 
-# # ---------------------- Walk through features ----------------- #
+# ---------------------- Walk through features ----------------- #
 #    --- Birth year was nan
 print '-- Birth year was nan --'
 print 'all', np.mean(dfn['BirthYear'] == 1800)

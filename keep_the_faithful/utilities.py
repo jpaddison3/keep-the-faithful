@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import utilities
+import feature_engineering
 
 
 def load_data(year=2010):
@@ -57,3 +59,34 @@ def clean_data(dfn, dfa, dfadd):
     # fill nans with ridiculous things
     dfn = dfn.fillna({'BirthYear': 1800, 'Gender': 'N', 'City': 'NA Land'})
     return dfn, dfa
+
+
+def full_load(today):
+    '''
+    Load data frame and add feature engineered columns
+
+    Returns user info
+    '''
+    dfn, dfa, dfadd, dfr = load_data(today.year)
+    dfn, dfa = clean_data(dfn, dfa, dfadd)
+    dfn, dfa = feature_engineering.select_active(dfn, dfa, today)
+    dfn = feature_engineering.add_churn(dfn, dfa, today)
+    dfn = feature_engineering.add_recent_attendance(dfn, dfa, today)
+    dfn = feature_engineering.add_small_groups(dfn, dfa, today)
+    dfn = feature_engineering.add_family(dfn, dfr)
+    dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup']).apply(lambda x: x.year)
+    dfn = feature_engineering.to_relative_time(dfn, today)
+    return dfn
+
+
+def combine_load(dates):
+    '''
+    Load feature engineered dataframes for the specified dates
+
+    Returns one user info data frame
+    '''
+    dfn = full_load(dates[0])
+    for date in dates[1:]:
+        dfn_i = full_load(date)
+        dfn = pd.concat([dfn, dfn_i])
+    return dfn

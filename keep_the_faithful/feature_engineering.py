@@ -160,16 +160,13 @@ def to_relative_time(dfn, today):
     return dfn
 
 
-def model_prep(dfn, today):
+def model_prep(dfn):
     '''
     Transforms dataframe into form presentable to a model.
 
     Returns feature matrix X, labels y, row identifiers name_ids, and the
     modified user info
     '''
-    dfn['WhenSetup'] = pd.to_datetime(dfn['WhenSetup'])\
-        .apply(lambda x: x.year)
-    dfn = to_relative_time(dfn, today)
     dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'SmallGroups', 'BirthYear', 
                     'WhenSetup'], axis=1)
     dfn = pd.get_dummies(dfn)
@@ -178,21 +175,3 @@ def model_prep(dfn, today):
     X = dfn.values
     return X, y, name_ids, dfn
 
-if __name__ == '__main__':
-    t0 = datetime.datetime.now()
-    dfn, dfa, dfadd, dfr = utilities.load_data()
-    t1 = datetime.datetime.now() - t0
-    print 't1', t1
-    dfn, dfa = utilities.clean_data(dfn, dfa, dfadd)
-    t2 = datetime.datetime.now() - t0 - t1
-    print 't2', t2
-    dfn, dfa = select_active(dfn, dfa)
-    t3 = datetime.datetime.now() - t0 - t2
-    print 't3', t3
-    # dfn = add_churn(dfn, dfa)
-    # t4 = datetime.datetime.now() - t0 - t3
-    # print 't4', t4
-    dfn = add_recent_attendance(dfn, dfa)
-    t4 = datetime.datetime.now() - t0 - t3
-    print 't4', t4
-    print dfn.head()
