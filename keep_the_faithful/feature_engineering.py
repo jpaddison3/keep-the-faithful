@@ -1,3 +1,6 @@
+'''
+Feature engineering functions
+'''
 import pandas as pd
 import numpy as np
 from collections import defaultdict
@@ -33,9 +36,6 @@ def select_active(dfn, dfa, today):
     dfn = dfn[np.in1d(dfn['NameCounter'], solid_users_arr)]
     # Some users are not in dfn, which is, hmm, bad
     lonelies = solid_users_arr[~np.in1d(solid_users_arr, dfn.index)]
-    # for l in lonelies:
-    #     print l in dfn.index
-    #     print l in dfa['NameID'].values
 
     # solid user attendance
     dfa = dfa[dfa['NameID'].isin(solid_users)]
@@ -58,8 +58,6 @@ def add_churn(dfn, dfa, today):
     dfn['churn'] = 0
     dfn['churn'] = pd.Series((~dfn['NameCounter'].isin(future_present_users))
                              .astype('int'), index=dfn.index)
-    print 'total churned', dfn['churn'].sum()
-    print 'churn percentage', 100 * dfn['churn'].mean()
     return dfn
 
 
@@ -101,6 +99,7 @@ def add_small_groups(dfn, dfa, today):
         index=dfn.index)
 
     dfsg = dfa[(dfa['Organization'] != 'Sunday Worship') &
+               (dfa['Organization'] != 'Sunday School') &
                (pd.to_datetime(dfa['Date']) >= today - np.timedelta64(4, 'M')) &
                (pd.to_datetime(dfa['Date']) < today)]
     sg_series = dfsg.groupby('NameID')['Organization'].unique()
@@ -110,7 +109,7 @@ def add_small_groups(dfn, dfa, today):
 
     sg_dates = {}
     for small_group in dfa['Organization'].unique():
-        if small_group != 'Sunday Worship':
+        if (small_group != 'Sunday Worship') & (small_group != 'Sunday School'):
             sg_dates[small_group] = \
                 dfa[(pd.to_datetime(dfa['Date']) >=
                      today - np.timedelta64(4, 'M')) &
@@ -174,4 +173,3 @@ def model_prep(dfn):
     y = dfn.pop('churn').values
     X = dfn.values
     return X, y, name_ids, dfn
-

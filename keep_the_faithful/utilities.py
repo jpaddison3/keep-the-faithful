@@ -1,3 +1,6 @@
+'''
+Utilities for loading and cleaning data
+'''
 import pandas as pd
 import numpy as np
 import utilities
