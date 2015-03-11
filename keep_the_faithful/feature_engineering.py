@@ -17,18 +17,14 @@ def select_active(dfn, dfa, today):
     # select for year for speed
     dfa = dfa[dfa['Date'].str[-4:] == str(today.year)]
 
+    two_months = np.timedelta64(2, 'M')
     recent_sundays = (dfa['Organization'] == 'Sunday Worship') & \
-                     (pd.to_datetime(dfa['Date']) >=
-                      today - np.timedelta64(2, 'M')) & \
+                     (pd.to_datetime(dfa['Date']) >= today - two_months) & \
                      (pd.to_datetime(dfa['Date']) < today)
     recent_attendance_numbers = dfa[recent_sundays]\
         .groupby(['NameID'])['Date'].nunique()
     recent_users = recent_attendance_numbers[
         recent_attendance_numbers >= 2].index
-
-    year_attendance_numbers = dfa[dfa['Organization'] == 'Sunday Worship']\
-        .groupby(['NameID'])['Date'].nunique()
-    year_users = year_attendance_numbers[year_attendance_numbers >= 2].index
 
     solid_users = set(recent_users)
     # solid user info
@@ -55,7 +51,6 @@ def add_churn(dfn, dfa, today):
         (pd.to_datetime(dfa['Date']) >= today) &
         (pd.to_datetime(dfa['Date']) <= today + np.timedelta64(2, 'M')) &
         (dfa['Organization'] == 'Sunday Worship')]['NameID'].values
-    dfn['churn'] = 0
     dfn['churn'] = pd.Series((~dfn['NameCounter'].isin(future_present_users))
                              .astype('int'), index=dfn.index)
     return dfn
@@ -81,6 +76,23 @@ def add_recent_attendance(dfn, dfa, today):
         sunday -= np.timedelta64(7, 'D')
 
     return dfn
+
+
+def small_group_percentage(user_and_sg, dfa=None, sg_dates=None, today=None):
+    if np.any(pd.isnull(user_and_sg['SmallGroups'])):
+        return -1
+    dfa_user = dfa[dfa['NameID'] == user_and_sg['NameCounter']]
+    att_number = 0
+    total_meeting_number = 0
+    for sg in user_and_sg['SmallGroups']:
+        dfa_user_smallgroup_att = dfa_user[
+            (dfa_user['Organization'] == sg) &
+            (pd.to_datetime(dfa['Date']) >= today -
+             np.timedelta64(4, 'M')) &
+            (pd.to_datetime(dfa['Date']) < today)]
+        att_number += len(dfa_user_smallgroup_att['Date'].unique())
+        total_meeting_number += len(sg_dates[sg])
+    return att_number / float(total_meeting_number) * 100
 
 
 def add_small_groups(dfn, dfa, today):
@@ -116,24 +128,8 @@ def add_small_groups(dfn, dfa, today):
                     (pd.to_datetime(dfa['Date']) < today) &
                     (dfa['Organization'] == small_group)]['Date'].unique()
 
-    def small_group_percentage(user_and_sg, today=None):
-        if np.any(pd.isnull(user_and_sg['SmallGroups'])):
-            return -1
-        dfa_user = dfa[dfa['NameID'] == user_and_sg['NameCounter']]
-        att_number = 0
-        total_meeting_number = 0
-        for sg in user_and_sg['SmallGroups']:
-            dfa_user_smallgroup_att = dfa_user[
-                (dfa_user['Organization'] == sg) &
-                (pd.to_datetime(dfa['Date']) >= today -
-                 np.timedelta64(4, 'M')) &
-                (pd.to_datetime(dfa['Date']) < today)]
-            att_number += len(dfa_user_smallgroup_att['Date'].unique())
-            total_meeting_number += len(sg_dates[sg])
-        return att_number / float(total_meeting_number) * 100
-
     dfn['SGPercentage'] = dfn[['NameCounter', 'SmallGroups']].apply(
-        small_group_percentage, axis=1, today=today)
+        small_group_percentage, axis=1, dfa=dfa, sg_dates=sg_dates, today=today)
 
     return dfn
 
