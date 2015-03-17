@@ -131,6 +131,8 @@ def add_small_groups(dfn, dfa, today):
     dfn['SGPercentage'] = dfn[['NameCounter', 'SmallGroups']].apply(
         small_group_percentage, axis=1, dfa=dfa, sg_dates=sg_dates, today=today)
 
+    dfn = dfn.drop('SmallGroups', axis=1)
+
     return dfn
 
 
@@ -155,6 +157,26 @@ def to_relative_time(dfn, today):
     return dfn
 
 
+def add_monthly_ave(dfn, dfa, today):
+    month_end = today
+    month_begin = today - np.timedelta64(1, 'M')
+    for i in xrange(1, 4):
+        dfa_month = dfa[(month_begin <= dfa['Date']) &
+                        (dfa['Date'] < month_end) &
+                        (dfa['Organization'] == 'Sunday Worship')]
+        num_sundays = dfa_month['Date'].nunique()
+        att_series = dfa_month.groupby('NameID')['Date'].count()
+        att_df = pd.DataFrame({'NameCounter': att_series.index,
+                              str(i) + 'MonthsAgoAtt': att_series/num_sundays})
+        dfn = pd.merge(dfn, att_df, how='left', on='NameCounter')
+
+        dfn = dfn.fillna({str(i) + 'MonthsAgoAtt': 0})
+
+        month_end = month_begin
+        month_begin = month_end - np.timedelta64(1, 'M')
+    return dfn
+
+
 def model_prep(dfn):
     '''
     Transforms dataframe into form presentable to a model.
@@ -162,8 +184,8 @@ def model_prep(dfn):
     Returns feature matrix X, labels y, row identifiers name_ids, and the
     modified user info
     '''
-    dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'SmallGroups', 'BirthYear', 
-                    'WhenSetup'], axis=1)
+    dfn = dfn.drop(['City', 'FamNu', 'UnitNu', 'BirthYear', 'Gender',
+                    'WhenSetup'], axis=1) # small groups back in
     dfn = pd.get_dummies(dfn)
     name_ids = dfn.pop('NameCounter').values
     y = dfn.pop('churn').values
